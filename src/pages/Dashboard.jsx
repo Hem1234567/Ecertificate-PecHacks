@@ -228,7 +228,7 @@ export default function Dashboard() {
         toEmail: email, participantName: c.displayName,
         teamName: findField(c.data, 'team', 'group', 'squad'),
         schoolName: findField(c.data, 'school', 'institution', 'college'),
-        certId: c.id, imageDataUrl: c.imageDataUrl,
+        certId: c.id, certCode: c.certCode, imageDataUrl: c.imageDataUrl,
       })
       await DB.saveCertificate({ ...c, emailSentAt: Date.now(), emailSentTo: email })
       toast(`Certificate emailed to ${email}`, 'success')
@@ -253,7 +253,7 @@ export default function Dashboard() {
           await sendCertificate({
             toEmail: email, participantName: c.displayName,
             teamName: findField(c.data, 'team', 'group'), schoolName: findField(c.data, 'school', 'institution'),
-            certId: c.id, imageDataUrl: c.imageDataUrl,
+            certId: c.id, certCode: c.certCode, imageDataUrl: c.imageDataUrl,
           })
           await DB.saveCertificate({ ...c, emailSentAt: Date.now(), emailSentTo: email })
           sent++

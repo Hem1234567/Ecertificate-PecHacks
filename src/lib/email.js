@@ -21,15 +21,18 @@ export async function sendCertificate(opts) {
   if (!s.templateId) throw new Error('EmailJS Template ID missing.')
   if (!opts.toEmail) throw new Error('No recipient email address provided.')
 
-  // Build the public view URL → /view-certificate?id=<certId>
+  // Build the public verify URL → /verify?code=CERT-XXXX-XXXX
   let viewUrl = ''
-  if (opts.certId && opts.imageDataUrl && isConnected()) {
+  const siteUrl = (getSettings().siteUrl || 'https://school-ecertify.web.app').replace(/\/$/, '')
+  if (opts.certCode) {
+    // Primary: use the cert code directly — no Firebase push needed
+    viewUrl = `${siteUrl}/verify?code=${opts.certCode}`
+    console.log('[Email] Certificate verify URL:', viewUrl)
+  } else if (opts.certId && opts.imageDataUrl && isConnected()) {
     try {
       await pushCertShare(opts.certId, opts.imageDataUrl, opts.participantName)
-      const siteUrl = (getSettings().siteUrl || 'https://school-ecertify.web.app').replace(/\/$/, '')
-      // Always point to /view-certificate route (React app)
-      viewUrl = `${siteUrl}/view-certificate?id=${opts.certId}`
-      console.log('[Email] Certificate view URL:', viewUrl)
+      viewUrl = `${siteUrl}/verify?code=${opts.certId}`
+      console.log('[Email] Certificate verify URL (fallback):', viewUrl)
     } catch (e) {
       console.warn('[Email] Could not push cert share to Firebase:', e.message || e)
     }
@@ -43,7 +46,7 @@ export async function sendCertificate(opts) {
     team_name:        opts.teamName        || '',
     school_name:      opts.schoolName      || '',
     subject:          'Pechacks 4.0 – High School Track Certificate',
-    // This becomes the "Download Certificate" button href in the email template
+    // This becomes the "View My Certificate" button href in the email template
     view_url:         viewUrl,
   }
 
