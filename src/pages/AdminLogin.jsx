@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -6,10 +6,11 @@ export default function AdminLogin() {
   const { login, loggedIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState('')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [lockSecs, setLockSecs] = useState(0)
   const justRegistered = location.state?.registered === true
 
   // Already logged in → redirect
@@ -18,79 +19,75 @@ export default function AdminLogin() {
     return null
   }
 
+  // Countdown timer for lockout
+  useEffect(() => {
+    if (lockSecs <= 0) return
+    const id = setInterval(() => {
+      setLockSecs(s => {
+        if (s <= 1) { clearInterval(id); setError(''); return 0 }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [lockSecs])
+
   async function handleSubmit(e) {
     e.preventDefault()
+    if (lockSecs > 0) return
     setError('')
-    if (!email || !password) { setError('Enter both email and password.'); return }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 300))
-    const ok = await login(email, password)
-    if (ok) {
+    const result = await login(email, password)
+    if (result.ok) {
       navigate('/admin/dashboard', { replace: true })
+    } else if (result.lockedUntil) {
+      setLockSecs(result.secsLeft)
+      setError(`Too many failed attempts. Try again in ${result.secsLeft}s.`)
     } else {
-      setError('Invalid email or password. Please try again.')
+      const left = result.attemptsLeft
+      setError(
+        left !== undefined
+          ? `Invalid credentials. ${left} attempt${left !== 1 ? 's' : ''} remaining before lockout.`
+          : 'Invalid email or password. Please try again.'
+      )
     }
     setLoading(false)
   }
 
+  const fmtSecs = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      background: `
-        radial-gradient(900px 500px at 20% 20%, rgba(201,162,75,0.06), transparent 55%),
-        radial-gradient(600px 400px at 80% 80%, rgba(111,184,172,0.05), transparent 50%)
-      `,
-      padding: 24,
-    }}>
-      {/* Back to landing */}
-      <Link to="/" style={{
-        position: 'absolute', top: 24, left: 32, fontSize: 13,
-        color: 'var(--text-dim)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-      }}>← Back to home</Link>
+    <div className="login-page">
+      {/* Back link */}
+      <Link to="/" className="login-back">← Back to home</Link>
 
       {/* Card */}
-      <div style={{
-        width: '100%', maxWidth: 420,
-        background: 'var(--surface)', border: '1px solid var(--border-soft)',
-        borderRadius: 20, padding: '40px 36px',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-      }}>
+      <div className="login-card">
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%', margin: '0 auto 14px',
-            background: 'radial-gradient(circle at 35% 30%, var(--gold-soft), var(--gold) 60%, var(--gold-dim) 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-display)', fontWeight: 700, color: '#201703', fontSize: 20,
-            boxShadow: '0 0 0 4px rgba(201,162,75,0.2)',
-          }}>CG</div>
-          <h1 style={{ fontSize: 22, margin: '0 0 6px', fontFamily: 'var(--font-display)' }}>Admin Portal</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>Sign in to access the certificate dashboard</p>
+        <div className="login-logo">
+          <div className="login-seal">CG</div>
+          <h1 className="login-title">Admin Portal</h1>
+          <p className="login-subtitle">Sign in to access the certificate dashboard</p>
         </div>
 
         {/* Success banner after registration */}
         {justRegistered && (
-          <div style={{
-            background: 'rgba(111,184,172,0.1)', border: '1px solid rgba(111,184,172,0.35)',
-            color: 'var(--teal)', borderRadius: 10, padding: '10px 14px',
-            fontSize: 13, marginBottom: 20, textAlign: 'center',
-          }}>
+          <div className="login-banner login-banner--success">
             ✅ Account created! Sign in with your new credentials.
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="on">
           <div className="field-row">
             <label htmlFor="admin-email">Email address</label>
             <input
               id="admin-email"
-              type="email"
+              type="text"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="Enter admin email"
               autoComplete="username"
               autoFocus
+              disabled={lockSecs > 0}
             />
           </div>
           <div className="field-row">
@@ -102,40 +99,26 @@ export default function AdminLogin() {
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
+              disabled={lockSecs > 0}
             />
           </div>
 
           {error && (
-            <div style={{
-              background: 'var(--danger-soft)', border: '1px solid #5c3038',
-              color: '#ff9d97', borderRadius: 8, padding: '10px 14px',
-              fontSize: 13, marginBottom: 16,
-            }}>
-              ⚠ {error}
+            <div className={`login-banner ${lockSecs > 0 ? 'login-banner--lockout' : 'login-banner--error'}`}>
+              {lockSecs > 0
+                ? `🔒 Account locked. Try again in ${fmtSecs(lockSecs)}`
+                : `⚠ ${error}`}
             </div>
           )}
 
           <button
             type="submit"
-            className="btn btn-gold btn-block"
-            style={{ marginTop: 8, fontSize: 15, padding: '12px 20px' }}
-            disabled={loading}
+            className="btn btn-gold btn-block login-submit"
+            disabled={loading || lockSecs > 0}
           >
-            {loading ? 'Signing in…' : '🔐 Sign In'}
+            {loading ? 'Signing in…' : lockSecs > 0 ? `Locked (${fmtSecs(lockSecs)})` : '🔐 Sign In'}
           </button>
         </form>
-
-        {/* Register Now link */}
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
-          Don't have an account?{' '}
-          <Link
-            to="/admin/register"
-            style={{ color: 'var(--gold-soft)', textDecoration: 'none', fontWeight: 600 }}
-          >
-            Register Now →
-          </Link>
-        </div>
-
       </div>
     </div>
   )

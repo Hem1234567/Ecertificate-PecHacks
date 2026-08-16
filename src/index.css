@@ -23,6 +23,7 @@
   --shadow: 0 8px 24px rgba(0,0,0,0.35);
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  --mobile-nav-h: 62px;
 }
 
 *{box-sizing:border-box;}
@@ -50,7 +51,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0 0 4px;}
   border-right:1px solid var(--border-soft);
   padding:26px 18px;
   display:flex;flex-direction:column;gap:28px;
-  position:sticky;top:0;height:100vh;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
 }
 .brand{display:flex;align-items:center;gap:10px;}
 .brand-seal{
@@ -70,11 +71,24 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0 0 4px;}
 }
 .nav a:hover{background:var(--surface);color:var(--text);}
 .nav a.active{background:var(--surface-2);color:var(--gold-soft);font-weight:600;}
+.nav-icon{font-size:16px;flex:none;}
+.nav-label{flex:1;}
 .sidebar-foot{
   margin-top:auto;font-size:11.5px;color:var(--text-faint);
   border-top:1px solid var(--border-soft);padding-top:14px;line-height:1.6;
 }
+.logout-btn{
+  width:100%;padding:8px 12px;border-radius:8px;
+  background:var(--danger-soft);border:1px solid #5c3038;
+  color:#ff9d97;cursor:pointer;font-size:13px;font-weight:600;
+  font-family:var(--font-body);display:flex;align-items:center;
+  justify-content:center;gap:6px;transition:background .15s;
+}
+.logout-btn:hover{background:#4a2830;}
 .main{padding:30px 38px 60px;max-width:1280px;width:100%;}
+
+/* ---------- Mobile bottom nav ---------- */
+.mobile-nav{display:none;}
 
 /* ---------- Buttons ---------- */
 .btn{
@@ -226,7 +240,7 @@ input[type=range]{width:100%;accent-color:var(--gold);}
 }
 .field-list-item .rm:hover{color:var(--danger);}
 
-/* Editor */
+/* ---------- Editor ---------- */
 .editor-shell{display:grid;grid-template-columns:240px 1fr 260px;min-height:100vh;gap:0;}
 .editor-panel{background:var(--bg-elev);border-right:1px solid var(--border-soft);padding:18px;overflow-y:auto;}
 .editor-panel.right{border-right:none;border-left:1px solid var(--border-soft);}
@@ -251,15 +265,157 @@ input[type=range]{width:100%;accent-color:var(--gold);}
 }
 .props-empty{color:var(--text-faint);font-size:13px;line-height:1.7;text-align:center;padding:16px 0;}
 
-/* Scrollbar */
+/* ---------- Scrollbar ---------- */
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:6px;border:2px solid var(--bg);}
 
-@media (max-width:880px){
-  .shell{grid-template-columns:1fr;}
-  .sidebar{flex-direction:row;align-items:center;padding:14px 16px;overflow-x:auto;height:auto;position:static;}
-  .nav{flex-direction:row;}
-  .sidebar-foot{display:none;}
-  .main{padding:20px;}
+/* ============================================================
+   Login Page
+   ============================================================ */
+.login-page{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:clamp(16px,4vw,32px);
+  position:relative;
+  background:
+    radial-gradient(900px 500px at 20% 20%, rgba(201,162,75,0.06), transparent 55%),
+    radial-gradient(600px 400px at 80% 80%, rgba(111,184,172,0.05), transparent 50%);
+}
+.login-back{
+  position:absolute;top:20px;left:clamp(16px,4vw,32px);
+  font-size:13px;color:var(--text-dim);text-decoration:none;
+  display:flex;align-items:center;gap:6px;
+  transition:color .15s;
+}
+.login-back:hover{color:var(--text);text-decoration:none;}
+.login-card{
+  width:100%;max-width:clamp(300px,90vw,440px);
+  background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:clamp(14px,3vw,22px);
+  padding:clamp(24px,5vw,44px) clamp(20px,5vw,40px);
+  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+}
+.login-logo{text-align:center;margin-bottom:clamp(20px,4vw,32px);}
+.login-seal{
+  width:clamp(44px,10vw,56px);height:clamp(44px,10vw,56px);border-radius:50%;
+  margin:0 auto clamp(10px,2vw,16px);
+  background:radial-gradient(circle at 35% 30%,var(--gold-soft),var(--gold) 60%,var(--gold-dim) 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;color:#201703;
+  font-size:clamp(16px,3.5vw,22px);
+  box-shadow:0 0 0 4px rgba(201,162,75,0.2);
+}
+.login-title{font-size:clamp(18px,4vw,24px);margin:0 0 6px;font-family:var(--font-display);}
+.login-subtitle{font-size:clamp(11px,2.5vw,13px);color:var(--text-dim);margin:0;}
+.login-banner{
+  border-radius:9px;padding:10px 14px;font-size:13px;
+  margin-bottom:16px;text-align:center;line-height:1.5;
+}
+.login-banner--success{
+  background:rgba(111,184,172,0.1);border:1px solid rgba(111,184,172,0.35);color:var(--teal);
+}
+.login-banner--error{
+  background:var(--danger-soft);border:1px solid #5c3038;color:#ff9d97;
+}
+.login-banner--lockout{
+  background:rgba(90,50,20,0.35);border:1px solid #7a4a20;color:#ffb87a;
+  font-weight:600;letter-spacing:.01em;
+}
+.login-submit{margin-top:8px;font-size:clamp(13px,3vw,15px);padding:clamp(11px,2.5vw,14px) 20px;}
+
+/* ============================================================
+   Responsive — Tablet (≤ 900px)
+   ============================================================ */
+@media (max-width:900px){
+  .shell{
+    grid-template-columns:1fr;
+    padding-bottom:var(--mobile-nav-h);
+  }
+  /* Hide desktop sidebar */
+  .sidebar{display:none;}
+
+  /* Show mobile bottom nav */
+  .mobile-nav{
+    display:flex;align-items:stretch;
+    position:fixed;bottom:0;left:0;right:0;
+    height:var(--mobile-nav-h);
+    background:var(--bg-elev);
+    border-top:1px solid var(--border-soft);
+    z-index:90;
+    box-shadow:0 -4px 24px rgba(0,0,0,0.4);
+  }
+  .mobile-nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;text-decoration:none;color:var(--text-dim);
+    border:none;background:transparent;cursor:pointer;
+    font-family:var(--font-body);font-size:10px;font-weight:600;
+    padding:6px 4px;transition:color .15s,background .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mobile-nav-item:hover,.mobile-nav-item.active{
+    color:var(--gold-soft);background:rgba(201,162,75,0.07);text-decoration:none;
+  }
+  .mobile-nav-icon{font-size:20px;line-height:1;}
+  .mobile-nav-label{font-size:10px;letter-spacing:.02em;}
+  .mobile-nav-logout{color:var(--danger);}
+  .mobile-nav-logout:hover{color:#ff9d97;background:var(--danger-soft);}
+
+  .main{padding:16px 16px clamp(16px,4vw,28px);}
+  .page-head{margin-bottom:18px;gap:12px;}
+  .page-head h1{font-size:22px;}
+  .cert-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
+  .field-row-2{grid-template-columns:1fr;}
+
+  /* Editor: stack panels */
   .editor-shell{grid-template-columns:1fr;}
+  .editor-panel{border-right:none;border-bottom:1px solid var(--border-soft);max-height:38vh;overflow-y:auto;}
+  .editor-panel.right{border-left:none;border-top:1px solid var(--border-soft);}
+
+  /* Modal: near-full-screen sheet */
+  .modal-backdrop{padding:0;align-items:flex-end;}
+  .modal{
+    max-width:100%;border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+    max-height:90vh;
+  }
+
+  /* Toast: full-width bottom */
+  .toast-stack{bottom:calc(var(--mobile-nav-h) + 12px);right:12px;left:12px;}
+  .toast{min-width:0;}
+}
+
+/* ============================================================
+   Responsive — Phone (≤ 540px)
+   ============================================================ */
+@media (max-width:540px){
+  .main{padding:14px 12px 22px;}
+  .page-head h1{font-size:20px;}
+  .page-head p{font-size:12.5px;}
+  .cert-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .cert-actions{gap:4px;}
+  .cert-actions .btn{font-size:11.5px;padding:5px 8px;}
+  .grid{grid-template-columns:1fr;gap:12px;}
+  .tpl-actions{gap:4px;}
+  .tpl-actions .btn{font-size:11.5px;padding:5px 8px;}
+  .cert-toolbar{gap:7px;}
+  .cert-toolbar input[type=text]{max-width:100%;}
+  .btn{font-size:13px;padding:9px 13px;}
+  .btn-sm{font-size:12px;padding:6px 9px;}
+  h2{font-size:18px;}
+  .card{padding:14px;}
+  .modal{max-height:85vh;padding:16px;}
+
+  /* Login page on tiny screens */
+  .login-back{font-size:12px;top:14px;left:14px;}
+}
+
+/* ============================================================
+   Responsive — Very small (≤ 360px)
+   ============================================================ */
+@media (max-width:360px){
+  .mobile-nav-label{display:none;}
+  .mobile-nav-icon{font-size:22px;}
+  .mobile-nav-item{padding:8px 2px;}
+  .cert-grid{grid-template-columns:1fr;}
 }
