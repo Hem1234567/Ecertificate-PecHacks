@@ -75,7 +75,7 @@ export default function AdminLogin() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@certify.com"
+              placeholder="Enter admin email"
               autoComplete="username"
               autoFocus
             />
@@ -112,12 +112,7 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 10, background: 'var(--bg-elev)', border: '1px solid var(--border-soft)' }}>
-          <div style={{ fontSize: 11.5, color: 'var(--text-faint)', marginBottom: 6, fontWeight: 600, letterSpacing: '.05em', textTransform: 'uppercase' }}>Default credentials</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Email: <code style={{ color: 'var(--gold-soft)' }}>admin@certify.com</code></div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3 }}>Password: <code style={{ color: 'var(--gold-soft)' }}>Admin@123</code></div>
-          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 6 }}>Change these in Settings after logging in.</div>
-        </div>
+
       </div>
     </div>
   )
