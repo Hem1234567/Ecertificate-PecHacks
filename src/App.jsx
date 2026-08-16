@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar.jsx'
 
 import Landing from './pages/Landing.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
+import AdminRegister from './pages/AdminRegister.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Editor from './pages/Editor.jsx'
 import Settings from './pages/Settings.jsx'
@@ -32,6 +33,7 @@ export default function App() {
           {/* ── Public routes ── */}
           <Route path="/" element={<Landing />} />
           <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/view-certificate" element={<ViewCertificate />} />
           <Route path="/verify" element={<Verify />} />
 

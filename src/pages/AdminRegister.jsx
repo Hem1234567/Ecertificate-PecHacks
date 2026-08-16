@@ -1,34 +1,30 @@
 import { useState } from 'react'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
-export default function AdminLogin() {
-  const { login, loggedIn } = useAuth()
+export default function AdminRegister() {
+  const { register } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const [email, setEmail] = useState('')
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const justRegistered = location.state?.registered === true
-
-  // Already logged in → redirect
-  if (loggedIn) {
-    navigate('/admin/dashboard', { replace: true })
-    return null
-  }
+  const [confirm, setConfirm]   = useState('')
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!email || !password) { setError('Enter both email and password.'); return }
+    if (!name || !email || !password) { setError('All fields are required.'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    if (password !== confirm) { setError('Passwords do not match.'); return }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 400)) // slight delay for UX
-    const ok = login(email, password)
-    if (ok) {
-      navigate('/admin/dashboard', { replace: true })
+    await new Promise(r => setTimeout(r, 350))
+    const result = register(name, email, password)
+    if (result.ok) {
+      navigate('/admin', { state: { registered: true } })
     } else {
-      setError('Invalid email or password. Please try again.')
+      setError(result.error)
     }
     setLoading(false)
   }
@@ -43,11 +39,11 @@ export default function AdminLogin() {
       `,
       padding: 24,
     }}>
-      {/* Back to landing */}
-      <Link to="/" style={{
+      {/* Back */}
+      <Link to="/admin" style={{
         position: 'absolute', top: 24, left: 32, fontSize: 13,
         color: 'var(--text-dim)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-      }}>← Back to home</Link>
+      }}>← Back to login</Link>
 
       {/* Card */}
       <div style={{
@@ -65,43 +61,56 @@ export default function AdminLogin() {
             fontFamily: 'var(--font-display)', fontWeight: 700, color: '#201703', fontSize: 20,
             boxShadow: '0 0 0 4px rgba(201,162,75,0.2)',
           }}>CG</div>
-          <h1 style={{ fontSize: 22, margin: '0 0 6px', fontFamily: 'var(--font-display)' }}>Admin Portal</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>Sign in to access the certificate dashboard</p>
+          <h1 style={{ fontSize: 22, margin: '0 0 6px', fontFamily: 'var(--font-display)' }}>Create Account</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>Register a new admin account</p>
         </div>
-
-        {/* Success banner after registration */}
-        {justRegistered && (
-          <div style={{
-            background: 'rgba(111,184,172,0.1)', border: '1px solid rgba(111,184,172,0.35)',
-            color: 'var(--teal)', borderRadius: 10, padding: '10px 14px',
-            fontSize: 13, marginBottom: 20, textAlign: 'center',
-          }}>
-            ✅ Account created! Sign in with your new credentials.
-          </div>
-        )}
 
         <form onSubmit={handleSubmit}>
           <div className="field-row">
-            <label htmlFor="admin-email">Email address</label>
+            <label htmlFor="reg-name">Full Name</label>
             <input
-              id="admin-email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Enter admin email"
-              autoComplete="username"
+              id="reg-name"
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Your name"
               autoFocus
             />
           </div>
+
           <div className="field-row">
-            <label htmlFor="admin-pass">Password</label>
+            <label htmlFor="reg-email">Email address</label>
             <input
-              id="admin-pass"
+              id="reg-email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="field-row">
+            <label htmlFor="reg-pass">Password</label>
+            <input
+              id="reg-pass"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
+              placeholder="Min. 6 characters"
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div className="field-row">
+            <label htmlFor="reg-confirm">Confirm Password</label>
+            <input
+              id="reg-confirm"
+              type="password"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder="Re-enter password"
+              autoComplete="new-password"
             />
           </div>
 
@@ -121,21 +130,16 @@ export default function AdminLogin() {
             style={{ marginTop: 8, fontSize: 15, padding: '12px 20px' }}
             disabled={loading}
           >
-            {loading ? 'Signing in…' : '🔐 Sign In'}
+            {loading ? 'Creating account…' : '✨ Register Now'}
           </button>
         </form>
 
-        {/* Register Now link */}
         <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-dim)' }}>
-          Don't have an account?{' '}
-          <Link
-            to="/admin/register"
-            style={{ color: 'var(--gold-soft)', textDecoration: 'none', fontWeight: 600 }}
-          >
-            Register Now →
+          Already have an account?{' '}
+          <Link to="/admin" style={{ color: 'var(--gold-soft)', textDecoration: 'none', fontWeight: 600 }}>
+            Sign in
           </Link>
         </div>
-
       </div>
     </div>
   )
