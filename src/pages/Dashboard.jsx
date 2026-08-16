@@ -204,6 +204,62 @@ export default function Dashboard() {
     toast(`Exported ${ids.length} certificate${ids.length === 1 ? '' : 's'} in ${teamCount} team folder${teamCount === 1 ? '' : 's'}`, 'success')
   }
 
+  // ── Excel Export (with details + verify link) ─────────────────
+  function exportExcel() {
+    // Use selected, or fall back to all filtered certs
+    const ids = selected.size > 0 ? [...selected] : filteredCerts.map(c => c.id)
+    if (!ids.length) return
+
+    const siteUrl = (getSettings().siteUrl || 'https://school-ecertify.web.app').replace(/\/$/, '')
+
+    const rows = ids.map(id => {
+      const c = certificates.find(x => x.id === id)
+      if (!c) return null
+      const data = c.data || {}
+
+      // Find email column dynamically
+      const emailKey = Object.keys(data).find(k => /mail/i.test(k))
+      const schoolKey = Object.keys(data).find(k => /school|institution|college/i.test(k))
+
+      return {
+        'Name':               c.displayName || '',
+        'Team':               c.teamName    || '',
+        'School':             schoolKey ? String(data[schoolKey]).trim() : '',
+        'Email':              emailKey  ? String(data[emailKey]).trim()  : '',
+        'Certificate Code':   c.certCode    || '',
+        'Verify Link':        c.certCode ? `${siteUrl}/verify?code=${c.certCode}` : '',
+        'Template':           c.templateName || '',
+        'Date Generated':     c.createdAt ? new Date(c.createdAt).toLocaleString('en-IN') : '',
+        'Email Sent':         c.emailSentAt ? '✓ Sent' : 'Not sent',
+        'Email Sent To':      c.emailSentTo || '',
+        'Email Sent At':      c.emailSentAt ? new Date(c.emailSentAt).toLocaleString('en-IN') : '',
+      }
+    }).filter(Boolean)
+
+    const ws = XLSX.utils.json_to_sheet(rows)
+
+    // Auto column widths
+    const colWidths = [
+      { wch: 28 }, // Name
+      { wch: 22 }, // Team
+      { wch: 30 }, // School
+      { wch: 32 }, // Email
+      { wch: 20 }, // Cert Code
+      { wch: 60 }, // Verify Link
+      { wch: 24 }, // Template
+      { wch: 22 }, // Date Generated
+      { wch: 12 }, // Email Sent
+      { wch: 32 }, // Email Sent To
+      { wch: 22 }, // Email Sent At
+    ]
+    ws['!cols'] = colWidths
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Certificates')
+    XLSX.writeFile(wb, `certificates_export_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast(`Exported ${rows.length} certificate${rows.length === 1 ? '' : 's'} to Excel`, 'success')
+  }
+
   // ── Send Mail ─────────────────────────────────────────────────
   function findEmail(cert) {
     const data = cert.data || {}
@@ -413,6 +469,7 @@ export default function Dashboard() {
               <span className="hint">{selected.size ? `${selected.size} selected` : ''}</span>
               <span style={{ flex: 1 }} />
               <button className="btn btn-ghost" disabled={selected.size === 0} onClick={exportZip}>📦 Export Selected (.zip)</button>
+              <button className="btn btn-ghost" onClick={exportExcel} title={selected.size === 0 ? 'Exports all filtered certificates' : 'Exports selected certificates'}>📊 Export Excel</button>
               <button className="btn btn-ghost" disabled={selected.size === 0} onClick={sendBulkMail}>✉️ Send Mail to Selected</button>
               <button className="btn btn-danger" disabled={selected.size === 0} onClick={deleteSelected}>Delete Selected</button>
             </div>
