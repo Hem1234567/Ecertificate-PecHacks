@@ -39,9 +39,42 @@ function requireConnected() {
   if (!app) throw new Error('Not connected to Firebase. Go to Settings and click Connect.')
 }
 
+/**
+ * Compress a base64 imageDataUrl to stay under Firestore's 1 MB field limit.
+ * Returns compressed JPEG data URL, or empty string on failure.
+ */
+async function compressDataUrl(dataUrl, maxBytes = 700000) {
+  if (!dataUrl) return ''
+  if (dataUrl.length <= maxBytes) return dataUrl
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 900
+      let w = img.naturalWidth, h = img.naturalHeight
+      const scale = Math.min(1, MAX / Math.max(w, h))
+      w = Math.round(w * scale); h = Math.round(h * scale)
+      const c = document.createElement('canvas')
+      c.width = w; c.height = h
+      const ctx = c.getContext('2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, 0, 0, w, h)
+      let q = 0.82, result
+      do {
+        result = c.toDataURL('image/jpeg', q)
+        q -= 0.06
+      } while (result.length > maxBytes && q > 0.15)
+      resolve(result.length <= maxBytes ? result : '')
+    }
+    img.onerror = () => resolve('')
+    img.src = dataUrl
+  })
+}
+
 export async function pushTemplate(tpl) {
   requireConnected()
-  const doc = Object.assign({}, tpl)
+  // Strip thumbnail — it's a large base64 preview, not needed in Firestore
+  const doc = Object.assign({}, tpl, { thumbnail: '' })
   await db.collection('templates').doc(tpl.id).set(doc)
   return doc
 }
@@ -54,7 +87,9 @@ export async function pullTemplates() {
 
 export async function pushCertificate(cert) {
   requireConnected()
-  const doc = Object.assign({}, cert)
+  // Compress imageDataUrl before pushing to stay under Firestore 1 MB limit
+  const compressed = await compressDataUrl(cert.imageDataUrl || '')
+  const doc = Object.assign({}, cert, { imageDataUrl: compressed })
   await db.collection('certificates').doc(cert.id).set(doc)
   return doc
 }
@@ -67,26 +102,7 @@ export async function pullCertificates() {
 
 export async function pushCertShare(id, imageDataUrl, displayName) {
   requireConnected()
-  const compressed = await new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      const MAX = 1000
-      let w = img.naturalWidth, h = img.naturalHeight
-      const scale = Math.min(1, MAX / Math.max(w, h))
-      w = Math.round(w * scale); h = Math.round(h * scale)
-      const c = document.createElement('canvas')
-      c.width = w; c.height = h
-      const ctx = c.getContext('2d')
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h)
-      ctx.drawImage(img, 0, 0, w, h)
-      let q = 0.85, dataUrl
-      do { dataUrl = c.toDataURL('image/jpeg', q); q -= 0.05 }
-      while (dataUrl.length > 700000 && q > 0.2)
-      resolve(dataUrl)
-    }
-    img.onerror = reject
-    img.src = imageDataUrl
-  })
+  const compressed = await compressDataUrl(imageDataUrl, 700000)
   await db.collection('cert_shares').doc(id).set({
     id, displayName: displayName || '', imageDataUrl: compressed, createdAt: Date.now()
   })
@@ -97,21 +113,38 @@ export async function pushCertShare(id, imageDataUrl, displayName) {
  * Push a certificate (with its template snapshot) to Firestore so the
  * verify page can reconstruct it from the certCode alone.
  * Document path: certificates/{cert.id}
+ *
+ * imageDataUrl is compressed to stay under Firestore's 1 MB document limit.
+ * The background image inside template.background.src is stripped (too large).
  */
 export async function pushCertificateWithCode(cert) {
   requireConnected()
+
+  // Compress the certificate preview image
+  const compressed = await compressDataUrl(cert.imageDataUrl || '')
+
+  // Strip the background src from the template snapshot (it's a full base64 image)
+  const templateSnapshot = cert.template
+    ? {
+        ...cert.template,
+        background: cert.template.background
+          ? { ...cert.template.background, src: '' }
+          : null,
+      }
+    : null
+
   const doc = {
-    id: cert.id,
-    certCode: cert.certCode,
-    displayName: cert.displayName || '',
-    teamName: cert.teamName || '',
+    id:           cert.id,
+    certCode:     cert.certCode,
+    displayName:  cert.displayName  || '',
+    teamName:     cert.teamName     || '',
     templateName: cert.templateName || '',
-    templateId: cert.templateId || '',
-    data: cert.data || {},
-    template: cert.template || null,    // full template snapshot for re-render
-    imageDataUrl: cert.imageDataUrl || '', // compressed preview
-    createdAt: cert.createdAt || Date.now(),
-    batchId: cert.batchId || '',
+    templateId:   cert.templateId   || '',
+    data:         cert.data         || {},
+    template:     templateSnapshot,
+    imageDataUrl: compressed,
+    createdAt:    cert.createdAt    || Date.now(),
+    batchId:      cert.batchId      || '',
   }
   await db.collection('certificates').doc(cert.id).set(doc)
   return doc
