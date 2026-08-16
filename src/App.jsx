@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Editor from './pages/Editor.jsx'
 import Settings from './pages/Settings.jsx'
 import ViewCertificate from './pages/ViewCertificate.jsx'
+import Verify from './pages/Verify.jsx'
 
 /* Admin shell: sidebar + content area */
 function AdminShell({ children }) {
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/view-certificate" element={<ViewCertificate />} />
+          <Route path="/verify" element={<Verify />} />
 
           {/* ── Protected admin routes ── */}
           <Route path="/admin/dashboard" element={

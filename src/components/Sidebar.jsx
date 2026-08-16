@@ -30,6 +30,9 @@ export default function Sidebar() {
         <NavLink to="/admin/settings" className={({ isActive }) => isActive ? 'active' : ''}>
           ⚙️ Settings
         </NavLink>
+        <NavLink to="/verify" target="_blank" rel="noopener noreferrer" className={({ isActive }) => isActive ? 'active' : ''}>
+          🔍 Verify Certificate
+        </NavLink>
       </nav>
 
       <div className="sidebar-foot">

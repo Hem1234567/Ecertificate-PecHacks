@@ -4,8 +4,9 @@ import * as DB from '../lib/db.js'
 import { drawToDataUrl } from '../lib/render.js'
 import { fromCertificate } from '../lib/pdf.js'
 import { sendCertificate } from '../lib/email.js'
-import { isEmailConfigured } from '../lib/settings.js'
-import { slugify, fmtDate, downloadBlob, parseSpreadsheet } from '../lib/utils.js'
+import { isEmailConfigured, getSettings } from '../lib/settings.js'
+import { slugify, fmtDate, downloadBlob, parseSpreadsheet, generateCertCode } from '../lib/utils.js'
+import { autoConnectIfEnabled, isConnected, pushCertificateWithCode } from '../lib/firebase.js'
 import CertModal from '../components/CertModal.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 
@@ -113,6 +114,10 @@ export default function Dashboard() {
     const workingTemplate = { ...t, fields: workingFields }
     let done = 0
 
+    // Try to connect Firebase for Firestore sync
+    autoConnectIfEnabled()
+    const firebaseReady = isConnected()
+
     setGenProgress({ done: 0, total })
     for (const row of parsedSheet.rows) {
       try {
@@ -120,11 +125,23 @@ export default function Dashboard() {
         const primaryField = workingFields.find(f => f.key === 'name') || workingFields[0]
         const displayName = primaryField ? (row[primaryField.mappedColumn] || '') : ''
         const teamName = teamCol ? String(row[teamCol] || '').trim() : ''
-        await DB.saveCertificate({
+        const certCode = generateCertCode()
+        const saved = await DB.saveCertificate({
           templateId: t.id, templateName: t.name, batchId, data: row,
           displayName: String(displayName || `Row ${done + 1}`),
-          teamName, imageDataUrl: dataUrl,
+          teamName, imageDataUrl: dataUrl, certCode,
+          // Store a lean template snapshot (background src + fields + dimensions)
+          template: {
+            width: workingTemplate.width,
+            height: workingTemplate.height,
+            background: workingTemplate.background ? { src: workingTemplate.background.src } : null,
+            fields: workingFields,
+          },
         })
+        // Push to Firestore so /verify page can reconstruct it
+        if (firebaseReady) {
+          pushCertificateWithCode(saved).catch(err => console.warn('Firestore sync failed:', err))
+        }
       } catch (err) { console.error('Failed row', err) }
       done++
       setGenProgress({ done, total })
@@ -434,6 +451,24 @@ export default function Dashboard() {
                 <div className="sub">{c.templateName} · {fmtDate(c.createdAt)}</div>
                 {c.teamName && <div className="sub" style={{ color: 'var(--gold-soft)' }}>🏷️ {c.teamName}</div>}
                 {c.emailSentAt && <div className="sub" style={{ color: 'var(--teal)' }}>✓ Sent {fmtDate(c.emailSentAt)}</div>}
+                {c.certCode && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: 11, fontWeight: 700,
+                      background: 'rgba(201,162,75,0.13)', border: '1px solid var(--gold-dim)',
+                      color: 'var(--gold-soft)', padding: '2px 8px', borderRadius: 6, letterSpacing: '0.05em',
+                    }}>{c.certCode}</span>
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      style={{ fontSize: 10, padding: '2px 7px' }}
+                      title="Copy verify link"
+                      onClick={() => {
+                        const url = `${getSettings().siteUrl}/verify?code=${c.certCode}`
+                        navigator.clipboard.writeText(url).then(() => toast('Verify link copied!', 'success'))
+                      }}
+                    >🔗 Copy Link</button>
+                  </div>
+                )}
               </div>
               <div className="cert-actions">
                 <button className="btn btn-sm btn-ghost" onClick={() => setViewCert(c)}>View</button>

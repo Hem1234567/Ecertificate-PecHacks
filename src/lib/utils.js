@@ -1,4 +1,12 @@
 /* lib/utils.js */
+
+/** Generate a unique certificate code, e.g. CERT-A3F2-9K1B */
+export function generateCertCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no ambiguous 0/O/1/I
+  const seg = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return `CERT-${seg(4)}-${seg(4)}`
+}
+
 export function slugify(str) {
   return String(str || 'certificate')
     .trim()

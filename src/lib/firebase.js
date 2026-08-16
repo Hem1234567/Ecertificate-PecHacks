@@ -92,3 +92,41 @@ export async function pushCertShare(id, imageDataUrl, displayName) {
   })
   return id
 }
+
+/**
+ * Push a certificate (with its template snapshot) to Firestore so the
+ * verify page can reconstruct it from the certCode alone.
+ * Document path: certificates/{cert.id}
+ */
+export async function pushCertificateWithCode(cert) {
+  requireConnected()
+  const doc = {
+    id: cert.id,
+    certCode: cert.certCode,
+    displayName: cert.displayName || '',
+    teamName: cert.teamName || '',
+    templateName: cert.templateName || '',
+    templateId: cert.templateId || '',
+    data: cert.data || {},
+    template: cert.template || null,    // full template snapshot for re-render
+    imageDataUrl: cert.imageDataUrl || '', // compressed preview
+    createdAt: cert.createdAt || Date.now(),
+    batchId: cert.batchId || '',
+  }
+  await db.collection('certificates').doc(cert.id).set(doc)
+  return doc
+}
+
+/**
+ * Look up a certificate in Firestore by its certCode (e.g. "CERT-A3F2-9K1B").
+ * Returns the doc data or null if not found.
+ */
+export async function getCertificateByCode(code) {
+  requireConnected()
+  const snap = await db.collection('certificates')
+    .where('certCode', '==', code.trim().toUpperCase())
+    .limit(1)
+    .get()
+  if (snap.empty) return null
+  return snap.docs[0].data()
+}
