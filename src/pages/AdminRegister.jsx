@@ -20,7 +20,7 @@ export default function AdminRegister() {
     if (password !== confirm) { setError('Passwords do not match.'); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 350))
-    const result = register(name, email, password)
+    const result = await register(name, email, password)
     if (result.ok) {
       navigate('/admin', { state: { registered: true } })
     } else {

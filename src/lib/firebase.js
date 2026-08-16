@@ -163,3 +163,30 @@ export async function getCertificateByCode(code) {
   if (snap.empty) return null
   return snap.docs[0].data()
 }
+
+/**
+ * Save a new admin account to Firestore (admins collection).
+ */
+export async function pushAdminAccount({ name, email, password }) {
+  requireConnected()
+  const id = 'admin_' + email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')
+  await db.collection('admins').doc(id).set({
+    id, name: name.trim(), email: email.trim().toLowerCase(), password, createdAt: Date.now(),
+  })
+  return id
+}
+
+/**
+ * Check Firestore for an admin with the given email + password.
+ * Returns the account doc or null.
+ */
+export async function getAdminByCredentials(email, password) {
+  requireConnected()
+  const snap = await db.collection('admins')
+    .where('email', '==', email.trim().toLowerCase())
+    .where('password', '==', password)
+    .limit(1)
+    .get()
+  if (snap.empty) return null
+  return snap.docs[0].data()
+}

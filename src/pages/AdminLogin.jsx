@@ -23,8 +23,8 @@ export default function AdminLogin() {
     setError('')
     if (!email || !password) { setError('Enter both email and password.'); return }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 400)) // slight delay for UX
-    const ok = login(email, password)
+    await new Promise(r => setTimeout(r, 300))
+    const ok = await login(email, password)
     if (ok) {
       navigate('/admin/dashboard', { replace: true })
     } else {
